@@ -1,7 +1,10 @@
 /target/
 !.mvn/wrapper/maven-wrapper.jar
-
-### STS ###
+/steam/
+/mods/
+/keys/
+.db
+.jar
 .apt_generated
 .classpath
 .factorypath
