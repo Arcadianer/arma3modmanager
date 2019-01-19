@@ -41,7 +41,7 @@ import lombok.ToString;
     "views",
     "tags"
 })
-@ToString
+
 public class Publishedfiledetail implements Serializable
 {
 
@@ -346,5 +346,18 @@ public class Publishedfiledetail implements Serializable
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
     }
+
+	@Override
+	public String toString() {
+		return "Publishedfiledetail [publishedfileid=" + publishedfileid + ", result=" + result + ", creator=" + creator
+				+ ", creatorAppId=" + creatorAppId + ", consumerAppId=" + consumerAppId + ", filename=" + filename
+				+ ", fileSize=" + fileSize + ", fileUrl=" + fileUrl + ", hcontentFile=" + hcontentFile + ", previewUrl="
+				+ previewUrl + ", hcontentPreview=" + hcontentPreview + ", title=" + title + ", description="
+				+ description + ", timeCreated=" + timeCreated + ", timeUpdated=" + timeUpdated + ", visibility="
+				+ visibility + ", banned=" + banned + ", banReason=" + banReason + ", subscriptions=" + subscriptions
+				+ ", favorited=" + favorited + ", lifetimeSubscriptions=" + lifetimeSubscriptions
+				+ ", lifetimeFavorited=" + lifetimeFavorited + ", views=" + views + ", tags=" + tags
+				+ ", additionalProperties=" + additionalProperties + "]";
+	}
 
 }

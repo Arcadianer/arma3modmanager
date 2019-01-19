@@ -21,9 +21,11 @@ import lombok.ToString;
 public class SourceEntry {
 	@Id
 	private Long workshopid;
-	private Long updatetime;
 	private String modname;
-	private String keyfilename;
+	@Builder.Default
+	private Long updatetime=(long) 0;
+	@Builder.Default
+	private String keyfilename="non";
 	
 
 }
