@@ -25,6 +25,7 @@ import java.util.logging.Level;
 import javax.persistence.Entity;
 
 import org.apache.commons.io.FilenameUtils;
+import org.hibernate.boot.registry.classloading.spi.ClassLoaderService.Work;
 import org.hibernate.internal.util.config.ConfigurationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -36,6 +37,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.BufferingClientHttpRequestFactory;
 import org.springframework.shell.standard.ShellComponent;
 import org.springframework.shell.standard.ShellMethod;
+import org.springframework.shell.standard.ShellOption;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -76,6 +78,7 @@ public class ModManagerService {
 	@Value("${steam.cmd.password}")
 	String password;
 	UpdateTask currenttask;
+	ArrayList<UpdateTask> upgradelist = null;
 
 	ExecutorService thread_pool;
 
@@ -193,13 +196,13 @@ public class ModManagerService {
 			deletekey(entry);
 			download(entry.getWorkshopid());
 			File entryfolder = new File(foldersteamcmd + "steamapps" + File.separator + "workshop" + File.separator
-					+ "content" + File.separator + "107410" + File.separator + entry.getWorkshopid()+File.separator);
+					+ "content" + File.separator + "107410" + File.separator + entry.getWorkshopid() + File.separator);
 			log.info("Fixing paths");
 			fix_path(entryfolder);
 			log.info("Adding key");
 			addkey(entry);
 			log.info("Linking Mod");
-			Path link = new File(modsfolder + entry.getModname()+File.separator).toPath();
+			Path link = new File(modsfolder + entry.getModname() + File.separator).toPath();
 			if (Files.exists(link)) {
 				Files.delete(link);
 			}
@@ -295,7 +298,8 @@ public class ModManagerService {
 				}
 			} else {
 				keyfile = findkey(file);
-				if(keyfile!=null)break;
+				if (keyfile != null)
+					break;
 			}
 		}
 		return keyfile;
@@ -323,24 +327,76 @@ public class ModManagerService {
 	}
 
 	@ShellMethod("Force steam to download an item")
-	public void force_download(Long id,String modname) throws IOException {
+	public void force_download(Long id, String modname) throws IOException {
 
 		log.info("Forcing download of mod");
-		SourceEntry forcedentry=SourceEntry.builder().modname(modname).workshopid(id).build();
-		UpdateTask task=new UpdateTask(forcedentry);
+		SourceEntry forcedentry = SourceEntry.builder().modname(modname).workshopid(id).build();
+		UpdateTask task = new UpdateTask(forcedentry);
 		updateitem(task);
 		log.info("Force done");
 
 	}
-	
-	private void update() {
-		ArrayList<UpdateTask> toupdate=new ArrayList<>();
+
+	@ShellMethod("Searches for updates")
+	public void search() {
+		ArrayList<UpdateTask> toupdate = new ArrayList<>();
 		log.info("Searching for updates");
-		Iterable<SourceEntry> sourcelist=sourceRepo.findAll();
+		Iterable<SourceEntry> sourcelist = sourceRepo.findAll();
 		for (SourceEntry sourceEntry : sourcelist) {
-			getobjectinfo(sourceEntry.getWorkshopid());
+			Publishedfiledetail respons = getobjectinfo(sourceEntry.getWorkshopid()).getResponse()
+					.getPublishedfiledetails().get(0);
+			Long updatetime = respons.getTimeUpdated();
+			if (updatetime > sourceEntry.getUpdatetime()) {
+				log.info(
+						"Update available for (" + sourceEntry.getWorkshopid() + "->" + sourceEntry.getModname() + ")");
+				UpdateTask updateTask = new UpdateTask(sourceEntry);
+				toupdate.add(updateTask);
+			}
+		}
+		if (toupdate.size() > 0) {
+			log.info("Updates ready to intall.\nType update to start.");
+			upgradelist = toupdate;
+		} else {
+			log.info("No update available");
+		}
+
+	}
+
+	@ShellMethod("Starts update")
+	public void update() {
+		
+		if (upgradelist != null) {
+			log.info("Staring update");
+			for (UpdateTask updateTask : upgradelist) {
+				log.info("\n\n\n");
+				log.info("#######################################################");
+				log.info("# Updating "+updateTask.getSource().getWorkshopid() + "->" + updateTask.getSource().getModname());
+				log.info("#######################################################");
+				updateitem(updateTask);
+				log.info("#######################################################");
+				if(updateTask.getStatus().equals(TaskStatus.done)) {
+					log.info("Mod installed");
+				}else if(updateTask.getStatus().equals(TaskStatus.done_with_error)) {
+					log.warning("Mod installed but with errors");
+					for (Exception exeption : updateTask.getExceptions()) {
+						log.warning(exeption.getMessage());
+					}
+				}else if(updateTask.getStatus().equals(TaskStatus.error)) {
+					log.severe("Mod installation failed");
+					for (Exception exeption : updateTask.getExceptions()) {
+						log.severe(exeption.getMessage());
+					}
+				}
+				log.info("#######################################################");
+				log.info("\n\n\n");
+				log.info("=======================================================");
+			}
+			log.info("Update done");
+		} else {
+			log.info("No update list found.\nType 'search' to search for updates.");
 		}
 		
 	}
+	
 
 }
